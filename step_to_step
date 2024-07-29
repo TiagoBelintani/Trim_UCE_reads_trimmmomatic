@@ -58,4 +58,70 @@ Computational Resources: Adjust SLURM parameters (-t and -c) as needed for your 
 ####################################################################################################################################################
 auto_trim.sh
 
+Important: Renaming Raw Data Files
+Before executing the script, it is crucial to rename the raw data files to match the required format. 
+Specifically, you need to change the names from read_2.fastq.gz and read_1.fastq.gz to read_R1.fastq.gz and read_R2.fastq.gz, respectively.
+
+rename 's/_1/_R1/' *.fastq.gz
+rename 's/_2/_R2/' *.fastq.gz
+
+or 
+
+# Rename files with _1 to _R1
+for file in *_1.fastq.gz; do
+    mv "$file" "$(echo "$file" | sed 's/_1/_R1/')"
+done
+
+# Rename files with _2 to _R2
+for file in *_2.fastq.gz; do
+    mv "$file" "$(echo "$file" | sed 's/_2/_R2/')"
+done
+
+or
+
+ls *_1.fastq.gz | parallel 'mv {} {.}_R1.fastq.gz'
+ls *_2.fastq.gz | parallel 'mv {} {.}_R2.fastq.gz'
+
+
+Script Adjustments
+To ensure the script runs correctly, you need to modify the paths in the following lines:
+
+Line 87: Update the path to the Trimmomatic JAR file if it is located in a different directory or if the filename is different. Currently, it is set to /home/tiagobelintani/programas/Trimmomatic-0.39/trimmomatic-0.39.jar.
+
+Line 92: Adjust the path to the adapters file used by Trimmomatic. The current path is /home/tiagobelintani/programas/Trimmomatic-0.39/adapters/TruSeq3-PE.fa. Ensure this path points to the correct adapters file for your analysis.
+
+Sample Script Adjustments
+Here is the modified section of the script with placeholders for your paths:
+
+# Example of Trimmomatic command
+date && time java -jar \
+    /path/to/trimmomatic.jar \       # Update this path
+    PE \
+    -threads 40 \
+    -phred33 $R1 $R2 $R1_pair $R1_unpair $R2_pair $R2_unpair \
+    HEADCROP:7 \
+    ILLUMINACLIP:/path/to/adapters.fa:2:30:10:2:keepBothReads \  # Update this path
+    LEADING:20 \
+    TRAILING:20 \
+    SLIDINGWINDOW:05:20 \
+    MINLEN:50
+
+
+Error Handling
+File Not Found: Displays an error if no files with the specified extension are found.
+Filename Error: Ensures that paired-end files are named correctly with _R1 and _R2.
+File Extension Error: Validates that file extensions are supported.
+Make sure to replace the placeholder paths with the actual paths relevant to your setup before running the script.
+
+
+
+
+
+
+
+
+
+
+
+
 
