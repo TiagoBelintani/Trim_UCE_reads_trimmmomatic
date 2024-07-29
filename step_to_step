@@ -7,43 +7,21 @@ Although adapted, this script was originally written in Python and can be access
 
 Please make sure to reference the developers in your study.
 
-
+####################################################################################################################################################
 Exemplo of "job". 
-#Trimmomatic_job.sh
 
-#!/bin/bash
-#SBATCH -t 20:00:00        # Tempo máximo de execução (20 horas)
-#SBATCH -c 40              # Número de núcleos de CPU por tarefa
-#SBATCH --mail-user=tiago.belintani@unesp.br    # Seu e-mail para notificações
-#SBATCH --mail-type=ALL    # Tipos de notificações por e-mail (ALL envia e-mails no início, fim e se houver falhas)
+#Trimmomatic_job.sh Github : https://github.com/TiagoBelintani/Trim_UCE_reads_trimmmomatic/blob/main/trimmomatic_job.sh
 
-# Carregar o ambiente Miniconda
-module load miniconda/3-2023-09
 
-# Ativar o ambiente conda desejado
-source activate /home/tiagobelintani/miniconda3/envs/phylogenetic
+Instructions for Path Modification
+To execute this script, make sure to change the paths in the following lines:
 
-# Definir as variáveis de entrada e saída
-INPUT_DIR="/home/tiagobelintani/uce_treinamento/raw_data"
-OUTPUT_DIR="/home/tiagobelintani/uce_treinamento/trimmed_data"
+Line 8: Modify the path to the Conda environment if necessary. The current path is /home/tiagobelintani/miniconda3/envs/phylogenetic.
+Line 11: Update the INPUT_DIR variable to the directory where your raw data files are stored.
+Line 14: Set the OUTPUT_DIR variable to the directory where you want the trimmed data to be saved.
+Line 15: Ensure that the path to auto_trim.sh is correct. If the script is not in the same directory as this SLURM script, provide the full path.
+Make sure these paths match your actual file locations and environment before running the script.
 
-# Verificar se o diretório de saída existe, se não, criar
-mkdir -p $OUTPUT_DIR
-
-# Obter a lista de arquivos de entrada
-FILES=($INPUT_DIR/*.fastq.gz)
-
-# Verificar se arquivos foram encontrados
-if [ ${#FILES[@]} -eq 0 ]; then
-    echo "No fastq.gz files found in the input directory."
-    exit 1
-fi
-
-# Passar todos os arquivos encontrados para o script auto_trim.sh
-# O script auto_trim.sh deve estar localizado no mesmo diretório que este script ou fornecer o caminho completo
-source /caminho/para/auto_trim.sh "${FILES[@]}"
-
-#####################################################################
 Detailed Explanation
 SLURM Header:
 
@@ -77,4 +55,7 @@ Path to auto_trim.sh: Make sure the path to the auto_trim.sh script is correct. 
 
 Computational Resources: Adjust SLURM parameters (-t and -c) as needed for your specific job.
 
-##########################################################################
+####################################################################################################################################################
+auto_trim.sh
+
+
