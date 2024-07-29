@@ -28,4 +28,4 @@ fi
 
 # Pass all the found files to the auto_trim.sh script
 # The auto_trim.sh script should be located in the same directory as this script or provide the full path
-source /path/to/auto_trim.sh "${FILES[@]}"
+source auto_trim.sh "${FILES[@]}"
