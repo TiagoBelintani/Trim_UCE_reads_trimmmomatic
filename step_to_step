@@ -1,0 +1,9 @@
+After setting up the working environment, we will execute the process using a job scheduler based on SLURM.
+
+To accomplish this, we will navigate to the directory containing the raw data (raw_data) and create two new files: trimmomatic_job.sh and auto_trim.sh.
+
+The trimmomatic_job.sh file is a job script that provides detailed execution instructions to the server. The auto_trim.sh file is a Python script that automates the execution of Trimmomatic. 
+Although adapted, this script was originally written in Python and can be accessed here [github repository](https://github.com/lakhujanivijay/I-Shell-Do-This/tree/master/automation_of_trimmomatic).
+Please make sure to reference the developers in your study.
+
+
