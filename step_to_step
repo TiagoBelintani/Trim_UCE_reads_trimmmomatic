@@ -3,8 +3,78 @@ After setting up the working environment, we will execute the process using a jo
 To accomplish this, we will navigate to the directory containing the raw data (raw_data) and create two new files: trimmomatic_job.sh and auto_trim.sh.
 
 The trimmomatic_job.sh file is a job script that provides detailed execution instructions to the server. The auto_trim.sh file is a Python script that automates the execution of Trimmomatic. 
-Although adapted, this script was originally written in Python and can be accessed here [GitHub repository](https://github.com/lakhujanivijay/I-Shell-Do-This/tree/master/automation_of_trimmomatic)
+Although adapted, this script was originally written in Python and can be accessed here: GitHub repository-  https://github.com/lakhujanivijay/I-Shell-Do-This/tree/master/automation_of_trimmomatic
 
 Please make sure to reference the developers in your study.
 
 
+Exemplo of "job". 
+#Trimmomatic_job.sh
+
+#!/bin/bash
+#SBATCH -t 20:00:00        # Tempo máximo de execução (20 horas)
+#SBATCH -c 40              # Número de núcleos de CPU por tarefa
+#SBATCH --mail-user=tiago.belintani@unesp.br    # Seu e-mail para notificações
+#SBATCH --mail-type=ALL    # Tipos de notificações por e-mail (ALL envia e-mails no início, fim e se houver falhas)
+
+# Carregar o ambiente Miniconda
+module load miniconda/3-2023-09
+
+# Ativar o ambiente conda desejado
+source activate /home/tiagobelintani/miniconda3/envs/phylogenetic
+
+# Definir as variáveis de entrada e saída
+INPUT_DIR="/home/tiagobelintani/uce_treinamento/raw_data"
+OUTPUT_DIR="/home/tiagobelintani/uce_treinamento/trimmed_data"
+
+# Verificar se o diretório de saída existe, se não, criar
+mkdir -p $OUTPUT_DIR
+
+# Obter a lista de arquivos de entrada
+FILES=($INPUT_DIR/*.fastq.gz)
+
+# Verificar se arquivos foram encontrados
+if [ ${#FILES[@]} -eq 0 ]; then
+    echo "No fastq.gz files found in the input directory."
+    exit 1
+fi
+
+# Passar todos os arquivos encontrados para o script auto_trim.sh
+# O script auto_trim.sh deve estar localizado no mesmo diretório que este script ou fornecer o caminho completo
+source /caminho/para/auto_trim.sh "${FILES[@]}"
+
+#####################################################################
+Detailed Explanation
+SLURM Header:
+
+#!/bin/bash: Defines the interpreter to be used.
+#SBATCH -t 20:00:00: Sets the maximum job runtime (20 hours).
+#SBATCH -c 40: Sets the number of CPU cores per task.
+#SBATCH --mail-user=tiago.belintani@unesp.br: Defines the email address for notifications.
+#SBATCH --mail-type=ALL: Specifies the types of email notifications to be sent (ALL sends notifications at the start, end, and in case of failures).
+Load and Activate Environment:
+
+module load miniconda/3-2023-09: Loads the Miniconda module.
+source activate /home/tiagobelintani/miniconda3/envs/phylogenetic: Activates the desired Conda environment.
+Define Directories:
+
+INPUT_DIR: Directory where the input files are located.
+OUTPUT_DIR: Directory where the processed files will be saved.
+Create Output Directory:
+
+mkdir -p $OUTPUT_DIR: Creates the output directory if it does not already exist.
+Get List of Files:
+
+FILES=($INPUT_DIR/*.fastq.gz): Retrieves the list of .fastq.gz files in the input directory.
+Check for Files:
+
+Checks if files were found and prints an error message if no files are found.
+Execute Processing Script:
+
+source /path/to/auto_trim.sh "${FILES[@]}": Executes the auto_trim.sh script, passing all found files as arguments. Replace /path/to/auto_trim.sh with the actual path to the script.
+Customization
+Path to auto_trim.sh: Make sure the path to the auto_trim.sh script is correct. If the script is in the same directory as the SLURM script, you can use source auto_trim.sh directly.
+
+Computational Resources: Adjust SLURM parameters (-t and -c) as needed for your specific job.
+
+##########################################################################
