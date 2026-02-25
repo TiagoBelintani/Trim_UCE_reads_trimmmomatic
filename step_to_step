@@ -1,121 +1,258 @@
-After setting up the working environment, we will execute the process using a job scheduler based on SLURM.
+# Trimmomatic UCE Tutorial (HPC + SLURM Ready)
 
-To accomplish this, we will navigate to the directory containing the raw data (raw_data) and create two new files: trimmomatic_job.sh and auto_trim.sh.
+Reproducible and portable pipeline for trimming paired-end Illumina
+reads using Trimmomatic in local environments and SLURM-based HPC
+clusters.
 
-The trimmomatic_job.sh file is a job script that provides detailed execution instructions to the server. The auto_trim.sh file is a Python script that automates the execution of Trimmomatic. 
-Although adapted, this script was originally written in Python and can be accessed here: GitHub repository-  https://github.com/lakhujanivijay/I-Shell-Do-This/tree/master/automation_of_trimmomatic
+------------------------------------------------------------------------
 
-Please make sure to reference the developers in your study.
+# Overview
 
-####################################################################################################################################################
-Exemplo of "job". 
+This repository provides:
 
-#Trimmomatic_job.sh Github : https://github.com/TiagoBelintani/Trim_UCE_reads_trimmmomatic/blob/main/trimmomatic_job.sh
+-   Reproducible installation via Conda or manual setup
+-   Automated execution for multiple samples
+-   SLURM-compatible job scripts
+-   Organized HPC-ready structure
+-   Complete quality control workflow
+-   Scientific justification for trimming decisions
 
+Main software:
 
-Instructions for Path Modification
-To execute this script, make sure to change the paths in the following lines:
+Trimmomatic -- read trimming software for Illumina sequencing data
 
-Line 8: Modify the path to the Conda environment if necessary. The current path is /home/tiagobelintani/miniconda3/envs/phylogenetic.
-Line 11: Update the INPUT_DIR variable to the directory where your raw data files are stored.
-Line 14: Set the OUTPUT_DIR variable to the directory where you want the trimmed data to be saved.
-Line 15: Ensure that the path to auto_trim.sh is correct. If the script is not in the same directory as this SLURM script, provide the full path.
-Make sure these paths match your actual file locations and environment before running the script.
+------------------------------------------------------------------------
 
-Detailed Explanation
-SLURM Header:
+# Repository Structure
 
-#!/bin/bash: Defines the interpreter to be used.
-#SBATCH -t 20:00:00: Sets the maximum job runtime (20 hours).
-#SBATCH -c 40: Sets the number of CPU cores per task.
-#SBATCH --mail-user=tiago.belintani@unesp.br: Defines the email address for notifications.
-#SBATCH --mail-type=ALL: Specifies the types of email notifications to be sent (ALL sends notifications at the start, end, and in case of failures).
-Load and Activate Environment:
+Trim_UCE_reads_trimmomatic/ │ ├── README.md\
+├── INSTALL.md\
+├── HPC_SLURM_GUIDE.md\
+├── environment.yml\
+│\
+├── scripts/\
+│ ├── trimmomatic_job.slurm\
+│ ├── auto_trim.sh\
+│ └── rename_reads.sh
 
-module load miniconda/3-2023-09: Loads the Miniconda module.
-source activate /home/tiagobelintani/miniconda3/envs/phylogenetic: Activates the desired Conda environment.
-Define Directories:
+------------------------------------------------------------------------
 
-INPUT_DIR: Directory where the input files are located.
-OUTPUT_DIR: Directory where the processed files will be saved.
-Create Output Directory:
+# Installation Guide
 
-mkdir -p $OUTPUT_DIR: Creates the output directory if it does not already exist.
-Get List of Files:
+## Step 1 -- Activate Conda
 
-FILES=($INPUT_DIR/*.fastq.gz): Retrieves the list of .fastq.gz files in the input directory.
-Check for Files:
+If using Anaconda:
 
-Checks if files were found and prints an error message if no files are found.
-Execute Processing Script:
+source \~/anaconda3/bin/activate
 
-source /path/to/auto_trim.sh "${FILES[@]}": Executes the auto_trim.sh script, passing all found files as arguments. Replace /path/to/auto_trim.sh with the actual path to the script.
-Customization
-Path to auto_trim.sh: Make sure the path to the auto_trim.sh script is correct. If the script is in the same directory as the SLURM script, you can use source auto_trim.sh directly.
+If using Miniconda:
 
-Computational Resources: Adjust SLURM parameters (-t and -c) as needed for your specific job.
+source \~/miniconda3/bin/activate
 
-####################################################################################################################################################
-auto_trim.sh
+Verify installation:
 
-Important: Renaming Raw Data Files
-Before executing the script, it is crucial to rename the raw data files to match the required format. 
-Specifically, you need to change the names from read_2.fastq.gz and read_1.fastq.gz to read_R1.fastq.gz and read_R2.fastq.gz, respectively.
+conda --version
 
-rename 's/_1/_R1/' *.fastq.gz
-rename 's/_2/_R2/' *.fastq.gz
+------------------------------------------------------------------------
 
-or 
+## Step 2 -- Create Dedicated Environment
 
-# Rename files with _1 to _R1
-for file in *_1.fastq.gz; do
-    mv "$file" "$(echo "$file" | sed 's/_1/_R1/')"
-done
+conda create -n uce_processing -y\
+conda activate uce_processing
 
-# Rename files with _2 to _R2
-for file in *_2.fastq.gz; do
-    mv "$file" "$(echo "$file" | sed 's/_2/_R2/')"
-done
+------------------------------------------------------------------------
 
-or
+## Step 3 -- Install Trimmomatic
 
-ls *_1.fastq.gz | parallel 'mv {} {.}_R1.fastq.gz'
-ls *_2.fastq.gz | parallel 'mv {} {.}_R2.fastq.gz'
+Recommended (Bioconda):
 
+conda install -c bioconda trimmomatic
 
-Script Adjustments
-To ensure the script runs correctly, you need to modify the paths in the following lines:
+Alternative (manual installation):
 
-Line 87: Update the path to the Trimmomatic JAR file if it is located in a different directory or if the filename is different. Currently, it is set to /home/tiagobelintani/programas/Trimmomatic-0.39/trimmomatic-0.39.jar.
+cd \~/programs\
+git clone https://github.com/usadellab/Trimmomatic.git\
+cd Trimmomatic
 
-Line 92: Adjust the path to the adapters file used by Trimmomatic. The current path is /home/tiagobelintani/programas/Trimmomatic-0.39/adapters/TruSeq3-PE.fa. Ensure this path points to the correct adapters file for your analysis.
+Test JAR manually:
 
-Sample Script Adjustments
-Here is the modified section of the script with placeholders for your paths:
+java -jar /full/path/to/trimmomatic-0.39.jar -version
 
-# Example of Trimmomatic command
-date && time java -jar \
-    /path/to/trimmomatic.jar \       # Update this path
-    PE \
-    -threads 40 \
-    -phred33 $R1 $R2 $R1_pair $R1_unpair $R2_pair $R2_unpair \
-    HEADCROP:7 \
-    ILLUMINACLIP:/path/to/adapters.fa:2:30:10:2:keepBothReads \  # Update this path
-    LEADING:20 \
-    TRAILING:20 \
-    SLIDINGWINDOW:05:20 \
-    MINLEN:50
+------------------------------------------------------------------------
 
+## Step 4 -- Test Installation
 
-Error Handling
-File Not Found: Displays an error if no files with the specified extension are found.
-Filename Error: Ensures that paired-end files are named correctly with _R1 and _R2.
-File Extension Error: Validates that file extensions are supported.
-Make sure to replace the placeholder paths with the actual paths relevant to your setup before running the script.
+trimmomatic --version
 
+Expected output:
 
+TrimmomaticPE: Version 0.39
 
+------------------------------------------------------------------------
 
+## Export Environment for Reproducibility
+
+conda env export \> environment.yml
+
+To recreate environment:
+
+conda env create -f environment.yml
+
+------------------------------------------------------------------------
+
+# Quality Assessment with FastQC
+
+Before trimming, evaluate raw reads:
+
+fastqc sample_R1.fastq.gz sample_R2.fastq.gz
+
+Key metrics to inspect:
+
+-   Per base sequence quality
+-   Adapter content
+-   Overrepresented sequences
+-   Per sequence GC content
+
+After trimming, run FastQC again to confirm improvements.
+
+------------------------------------------------------------------------
+
+# Trimmomatic Command (Portable Version)
+
+Define symbolic paths:
+
+TRIMMOMATIC_JAR="/path/to/trimmomatic.jar"\
+ADAPTERS="/path/to/adapters/TruSeq_all_PE.fa"\
+RAW_R1="sample_R1.fastq.gz"\
+RAW_R2="sample_R2.fastq.gz"\
+OUT_DIR="trimmed_reads"\
+THREADS=20
+
+Create output directory:
+
+mkdir -p \${OUT_DIR}
+
+Execute trimming:
+
+java -jar \${TRIMMOMATIC_JAR} PE\
+-threads \${THREADS}\
+-phred33\
+\${RAW_R1} \${RAW_R2}\
+\${OUT_DIR}/sample_R1_paired.fastq.gz\
+\${OUT_DIR}/sample_R1_unpaired.fastq.gz\
+\${OUT_DIR}/sample_R2_paired.fastq.gz\
+${OUT_DIR}/sample_R2_unpaired.fastq.gz \
+ ILLUMINACLIP:${ADAPTERS}:2:30:10:2:keepBothReads\
+LEADING:1\
+TRAILING:1\
+SLIDINGWINDOW:5:20\
+MINLEN:50\
+2\> \${OUT_DIR}/trimmomatic.log
+
+------------------------------------------------------------------------
+
+# Parameter Explanation
+
+PE\
+Paired-end mode.
+
+-threads\
+Number of CPU threads used.
+
+-phred33\
+Specifies Phred+33 quality encoding.
+
+ILLUMINACLIP\
+Removes adapter sequences.
+
+Format: ILLUMINACLIP:adapters.fa:2:30:10:2:keepBothReads
+
+LEADING:1\
+Removes low-quality bases from the start.
+
+TRAILING:1\
+Removes low-quality bases from the end.
+
+SLIDINGWINDOW:5:20\
+Cuts when average quality within a 5-base window drops below 20.
+
+MINLEN:50\
+Discards reads shorter than 50 bp after trimming.
+
+------------------------------------------------------------------------
+
+# Output Files
+
+sample_R1_paired.fastq.gz\
+sample_R1_unpaired.fastq.gz\
+sample_R2_paired.fastq.gz\
+sample_R2_unpaired.fastq.gz
+
+Paired reads are typically used for assembly.\
+Unpaired reads may be retained or discarded depending on downstream
+pipeline.
+
+------------------------------------------------------------------------
+
+# Impact on Assembly
+
+Proper trimming:
+
+-   Improves average read quality
+-   Reduces assembly fragmentation
+-   Increases contig reliability
+-   Enhances UCE locus recovery
+-   Reduces misassemblies
+
+Recommended assemblers for UCE workflows:
+
+-   SPAdes
+-   Trinity
+-   Velvet
+
+------------------------------------------------------------------------
+
+# SLURM Execution
+
+Submit job:
+
+sbatch scripts/trimmomatic_job.slurm
+
+Monitor queue:
+
+squeue -u \$USER
+
+------------------------------------------------------------------------
+
+# Complete Workflow
+
+Raw Data\
+↓\
+Initial FastQC\
+↓\
+Trimmomatic\
+↓\
+Post-trim FastQC\
+↓\
+Assembly\
+↓\
+UCE locus recovery
+
+------------------------------------------------------------------------
+
+# Citation
+
+Bolger AM, Lohse M, Usadel B. 2014.\
+Trimmomatic: a flexible trimmer for Illumina sequence data.
+Bioinformatics.
+
+------------------------------------------------------------------------
+
+# Author
+
+Tiago Belintani\
+2026
+*Brave the sun*
 
 
 
