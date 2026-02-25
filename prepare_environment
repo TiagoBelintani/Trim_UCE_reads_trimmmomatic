@@ -1,36 +1,61 @@
-#TRIMMOMATIC UCE TUTORIAL
+# Installation Guide
 
-#STEP 1 - ACTIVATE ANACONDA (environment and package management distributions)
+## Step 1 -- Activate Conda
 
-source ~/anaconda3/bin/activate
+If using Anaconda:
 
-or
+source \~/anaconda3/bin/activate
 
-source ~/miniconda3/bin/activate
+If using Miniconda:
 
-#STEP 2 ACTIVATE ENVIRONMENT
+source \~/miniconda3/bin/activate
 
+Verify installation:
 
-conda create --name uce_processing
+conda --version
 
-activate  uce_processing
+------------------------------------------------------------------------
 
-#STEP 3 install Trimmomatic
+## Step 2 -- Create Dedicated Environment
 
-conda install bioconda::trimmomatic
+conda create -n uce_processing -y\
+conda activate uce_processing
 
-or
+------------------------------------------------------------------------
 
-https://github.com/usadellab/Trimmomatic.git 
+## Step 3 -- Install Trimmomatic
 
+Recommended (Bioconda):
 
-#STEP 4 test program
+conda install -c bioconda trimmomatic
 
-for conda: trimmomatic --version
+Alternative (manual installation):
 
-for java: java -jar trimmomatic-0.39.jar --version (Important: I suggest using the entire directory path)
+cd \~/programs\
+git clone https://github.com/usadellab/Trimmomatic.git\
+cd Trimmomatic
 
-java -jar /meucaminho/trimmomatic-0.39.jar --version
+Test JAR manually:
 
+java -jar /full/path/to/trimmomatic-0.39.jar -version
 
+------------------------------------------------------------------------
+
+## Step 4 -- Test Installation
+
+trimmomatic --version
+
+Expected output:
+
+TrimmomaticPE: Version 0.39
+
+------------------------------------------------------------------------
+
+## Export Environment for Reproducibility
+
+conda env export \> environment.yml
+
+To recreate environment:
+
+conda env create -f environment.yml
 
