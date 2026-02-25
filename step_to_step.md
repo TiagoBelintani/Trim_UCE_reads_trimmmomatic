@@ -24,7 +24,7 @@ Trimmomatic -- read trimming software for Illumina sequencing data
 ------------------------------------------------------------------------
 
 # Repository Structure
-
+```bash
 Trim_UCE_reads_trimmomatic/ │ ├── README.md\
 ├── INSTALL.md\
 ├── HPC_SLURM_GUIDE.md\
@@ -34,7 +34,7 @@ Trim_UCE_reads_trimmomatic/ │ ├── README.md\
 │ ├── trimmomatic_job.slurm\
 │ ├── auto_trim.sh\
 │ └── rename_reads.sh
-
+```
 ------------------------------------------------------------------------
 
 # Installation Guide
@@ -42,42 +42,42 @@ Trim_UCE_reads_trimmomatic/ │ ├── README.md\
 ## Step 1 -- Activate Conda
 
 If using Anaconda:
-
+```bash
 source \~/anaconda3/bin/activate
-
+```
 If using Miniconda:
-
+```bash
 source \~/miniconda3/bin/activate
-
+```
 Verify installation:
-
+```bash
 conda --version
-
+```
 ------------------------------------------------------------------------
 
 ## Step 2 -- Create Dedicated Environment
-
+```bash
 conda create -n uce_processing -y\
 conda activate uce_processing
-
+```
 ------------------------------------------------------------------------
 
 ## Step 3 -- Install Trimmomatic
 
 Recommended (Bioconda):
-
+```
 conda install -c bioconda trimmomatic
-
+```
 Alternative (manual installation):
-
+```
 cd \~/programs\
 git clone https://github.com/usadellab/Trimmomatic.git\
 cd Trimmomatic
-
+```
 Test JAR manually:
-
+```
 java -jar /full/path/to/trimmomatic-0.39.jar -version
-
+```
 ------------------------------------------------------------------------
 
 ## Step 4 -- Test Installation
