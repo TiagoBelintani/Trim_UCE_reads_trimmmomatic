@@ -1,262 +1,291 @@
-# Trimmomatic UCE Tutorial (HPC + SLURM Ready)
+Trimmomatic UCE Tutorial (HPC + SLURM Ready)
 
-Reproducible and portable pipeline for trimming paired-end Illumina
-reads using Trimmomatic in local environments and SLURM-based HPC
-clusters.
+Reproducible and portable trimming-only pipeline for paired-end Illumina reads using Trimmomatic.
 
-------------------------------------------------------------------------
+This workflow behaves similarly to Illumiprocessor:
 
-# Overview
+accepts adapter definitions
+
+processes samples automatically
+
+renames outputs cleanly
+
+organizes output per sample
+
+generates quality reports
+
+No assembly is performed.
+
+Overview
 
 This repository provides:
 
--   Reproducible installation via Conda or manual setup
--   Automated execution for multiple samples
--   SLURM-compatible job scripts
--   Organized HPC-ready structure
--   Complete quality control workflow
--   Scientific justification for trimming decisions
+Reproducible installation via Conda
+
+Illumiprocessor-like adapter handling
+
+Multi-sample automated trimming
+
+Structured output per sample
+
+FastQC before and after trimming
+
+MultiQC report aggregation
+
+SLURM compatibility
 
 Main software:
 
-Trimmomatic -- read trimming software for Illumina sequencing data
+Trimmomatic — adapter and quality trimming tool for Illumina data
 
-------------------------------------------------------------------------
+Repository Structure
+Trim_UCE_reads_trimmomatic/
+├── README.md
+├── environment.yml
+├── config.sh
+├── run_trimming.sh
+├── run_trimming.slurm
+└── data/
+Installation
 
-# Repository Structure
-```bash
-Trim_UCE_reads_trimmomatic/ │ ├── README.md\
-├── INSTALL.md\
-├── HPC_SLURM_GUIDE.md\
-├── environment.yml\
-│\
-├── scripts/\
-│ ├── trimmomatic_job.slurm\
-│ ├── auto_trim.sh\
-│ └── rename_reads.sh
-```
-------------------------------------------------------------------------
+Activate Conda:
 
-# Installation Guide
+source ~/miniconda3/bin/activate
 
-## Step 1 -- Activate Conda
+Create environment:
 
-If using Anaconda:
-```bash
-source \~/anaconda3/bin/activate
-```
-If using Miniconda:
-```bash
-source \~/miniconda3/bin/activate
-```
-Verify installation:
-```bash
-conda --version
-```
-------------------------------------------------------------------------
+conda create -n uce_trim -y
+conda activate uce_trim
 
-## Step 2 -- Create Dedicated Environment
-```bash
-conda create -n uce_processing -y\
-conda activate uce_processing
-```
-------------------------------------------------------------------------
+Install required tools:
 
-## Step 3 -- Install Trimmomatic
+conda install -c bioconda trimmomatic fastqc multiqc -y
 
-Recommended (Bioconda):
-```
-conda install -c bioconda trimmomatic
-```
-Alternative (manual installation):
-```
-cd \~/programs\
-git clone https://github.com/usadellab/Trimmomatic.git\
-cd Trimmomatic
-```
-Test JAR manually:
-```
-java -jar /full/path/to/trimmomatic-0.39.jar -version
-```
-------------------------------------------------------------------------
+Export environment:
 
-## Step 4 -- Test Installation
+conda env export > environment.yml
+Configuration File (config.sh)
 
-trimmomatic --version
+This file mimics Illumiprocessor adapter configuration.
 
-Expected output:
+#!/bin/bash
 
-TrimmomaticPE: Version 0.39
-
-------------------------------------------------------------------------
-
-## Export Environment for Reproducibility
-
-conda env export \> environment.yml
-
-To recreate environment:
-
-conda env create -f environment.yml
-
-------------------------------------------------------------------------
-
-# Quality Assessment with FastQC
-
-Before trimming, evaluate raw reads:
-
-fastqc sample_R1.fastq.gz sample_R2.fastq.gz
-
-Key metrics to inspect:
-
--   Per base sequence quality
--   Adapter content
--   Overrepresented sequences
--   Per sequence GC content
-
-After trimming, run FastQC again to confirm improvements.
-
-------------------------------------------------------------------------
-
-# Trimmomatic Command (Portable Version)
-
-Define symbolic paths:
-
-TRIMMOMATIC_JAR="/path/to/trimmomatic.jar"\
-ADAPTERS="/path/to/adapters/TruSeq_all_PE.fa"\
-RAW_R1="sample_R1.fastq.gz"\
-RAW_R2="sample_R2.fastq.gz"\
-OUT_DIR="trimmed_reads"\
 THREADS=20
+PHRED="-phred33"
 
-Create output directory:
+TRIMMOMATIC_JAR="$(which trimmomatic)"
+ADAPTERS="/path/to/TruSeq_all_PE.fa"
 
-mkdir -p \${OUT_DIR}
+# Mode: UCE or RNA
+MODE="UCE"
+How Adapters Work (Illumiprocessor Concept)
 
-Execute trimming:
+Illumiprocessor inserts sample-specific indexes into adapter templates.
 
-java -jar \${TRIMMOMATIC_JAR} PE\
--threads \${THREADS}\
--phred33\
-\${RAW_R1} \${RAW_R2}\
-\${OUT_DIR}/sample_R1_paired.fastq.gz\
-\${OUT_DIR}/sample_R1_unpaired.fastq.gz\
-\${OUT_DIR}/sample_R2_paired.fastq.gz\
-${OUT_DIR}/sample_R2_unpaired.fastq.gz \
- ILLUMINACLIP:${ADAPTERS}:2:30:10:2:keepBothReads\
-LEADING:1\
-TRAILING:1\
-SLIDINGWINDOW:5:20\
-MINLEN:50\
-2\> \${OUT_DIR}/trimmomatic.log
+Trimmomatic does not insert indexes dynamically.
 
-------------------------------------------------------------------------
+Instead:
 
-# Parameter Explanation
+You provide a FASTA file with adapter sequences
 
-PE\
-Paired-end mode.
+Trimmomatic searches and removes matches
 
--threads\
-Number of CPU threads used.
+It trims read-through fragments
 
--phred33\
-Specifies Phred+33 quality encoding.
+If demultiplexing was done correctly by the sequencer:
+Indexes are already removed.
+You should NOT add i7/i5 sequences manually unless FastQC shows contamination.
 
-ILLUMINACLIP\
-Removes adapter sequences.
+Main Trimming Script (run_trimming.sh)
+#!/bin/bash
 
-Format: ILLUMINACLIP:adapters.fa:2:30:10:2:keepBothReads
+source config.sh
 
-LEADING:1\
-Removes low-quality bases from the start.
+mkdir -p results
+mkdir -p logs
 
-TRAILING:1\
-Removes low-quality bases from the end.
+for R1 in data/*_R1.fastq.gz
+do
+    SAMPLE=$(basename ${R1} _R1.fastq.gz)
+    R2=data/${SAMPLE}_R2.fastq.gz
 
-SLIDINGWINDOW:5:20\
-Cuts when average quality within a 5-base window drops below 20.
+    echo "Processing ${SAMPLE}"
 
-MINLEN:50\
-Discards reads shorter than 50 bp after trimming.
+    BASE="results/${SAMPLE}"
+    mkdir -p ${BASE}/raw
+    mkdir -p ${BASE}/trimmed
+    mkdir -p ${BASE}/qc_raw
+    mkdir -p ${BASE}/qc_trimmed
+    mkdir -p ${BASE}/stats
 
-------------------------------------------------------------------------
+    ln -sf ${R1} ${BASE}/raw/
+    ln -sf ${R2} ${BASE}/raw/
 
-# Output Files
+    ################################################
+    # FASTQC RAW
+    ################################################
 
-sample_R1_paired.fastq.gz\
-sample_R1_unpaired.fastq.gz\
-sample_R2_paired.fastq.gz\
-sample_R2_unpaired.fastq.gz
+    fastqc ${R1} ${R2} -o ${BASE}/qc_raw
 
-Paired reads are typically used for assembly.\
-Unpaired reads may be retained or discarded depending on downstream
-pipeline.
+    ################################################
+    # TRIMMING
+    ################################################
 
-------------------------------------------------------------------------
+    if [ "${MODE}" = "UCE" ]; then
 
-# Impact on Assembly
+        java -jar ${TRIMMOMATIC_JAR} PE \
+            -threads ${THREADS} \
+            ${PHRED} \
+            ${R1} ${R2} \
+            ${BASE}/trimmed/${SAMPLE}-READ1.fastq.gz \
+            ${BASE}/trimmed/${SAMPLE}-singletons.fastq.gz \
+            ${BASE}/trimmed/${SAMPLE}-READ2.fastq.gz \
+            ${BASE}/trimmed/${SAMPLE}-singletons.fastq.gz \
+            ILLUMINACLIP:${ADAPTERS}:2:30:10:8:true \
+            LEADING:5 TRAILING:5 \
+            SLIDINGWINDOW:4:18 \
+            MINLEN:45 \
+            2> ${BASE}/stats/${SAMPLE}_trim.log
+
+    else
+
+        java -jar ${TRIMMOMATIC_JAR} PE \
+            -threads ${THREADS} \
+            ${PHRED} \
+            ${R1} ${R2} \
+            ${BASE}/trimmed/${SAMPLE}-READ1.fastq.gz \
+            ${BASE}/trimmed/${SAMPLE}-singletons.fastq.gz \
+            ${BASE}/trimmed/${SAMPLE}-READ2.fastq.gz \
+            ${BASE}/trimmed/${SAMPLE}-singletons.fastq.gz \
+            ILLUMINACLIP:${ADAPTERS}:2:30:10:2:true \
+            LEADING:3 TRAILING:3 \
+            SLIDINGWINDOW:4:20 \
+            MINLEN:50 \
+            2> ${BASE}/stats/${SAMPLE}_trim.log
+
+    fi
+
+    ################################################
+    # FASTQC TRIMMED
+    ################################################
+
+    fastqc \
+        ${BASE}/trimmed/${SAMPLE}-READ1.fastq.gz \
+        ${BASE}/trimmed/${SAMPLE}-READ2.fastq.gz \
+        -o ${BASE}/qc_trimmed
+
+done
+
+################################################
+# GLOBAL MULTIQC
+################################################
+
+multiqc results -o results/multiqc
+
+Make executable:
+
+chmod +x run_trimming.sh
+
+Run:
+
+bash run_trimming.sh
+Output Structure (Illumiprocessor-like)
+results/
+├── sample1/
+│   ├── raw/
+│   ├── trimmed/
+│   │   ├── sample1-READ1.fastq.gz
+│   │   ├── sample1-READ2.fastq.gz
+│   │   └── sample1-singletons.fastq.gz
+│   ├── qc_raw/
+│   ├── qc_trimmed/
+│   └── stats/
+└── multiqc/
+What Each Parameter Means (Scientific Explanation)
+
+ILLUMINACLIP
+Removes adapter contamination and read-through fragments.
+
+2:30:10
+
+seed mismatches allowed
+
+palindrome clip threshold
+
+simple clip threshold
+
+LEADING / TRAILING
+Removes low-quality bases at ends (HiSeq edges often degrade).
+
+SLIDINGWINDOW
+Cuts read when local quality drops.
+
+MINLEN
+Removes excessively short fragments that harm downstream analysis.
+
+Why This Improves UCE Data
+
+UCE libraries often have:
+
+Short inserts
+
+Adapter read-through
+
+Quality decay at ends
 
 Proper trimming:
 
--   Improves average read quality
--   Reduces assembly fragmentation
--   Increases contig reliability
--   Enhances UCE locus recovery
--   Reduces misassemblies
+Improves mapping to probes
 
-Recommended assemblers for UCE workflows:
+Reduces false UCE recovery
 
--   SPAdes
--   Trinity
--   Velvet
+Improves downstream alignment
 
-------------------------------------------------------------------------
+Stabilizes phylogenetic signal
 
-# SLURM Execution
+SLURM Execution
 
-Submit job:
+run_trimming.slurm:
 
-sbatch scripts/trimmomatic_job.slurm
+#!/bin/bash
+#SBATCH --job-name=uce_trim
+#SBATCH --time=24:00:00
+#SBATCH --cpus-per-task=20
+#SBATCH --mem=80G
 
-Monitor queue:
+module load miniconda
+conda activate uce_trim
 
-squeue -u \$USER
+bash run_trimming.sh
 
-------------------------------------------------------------------------
+Submit:
 
-# Complete Workflow
+sbatch run_trimming.slurm
+Complete Workflow Summary
 
-Raw Data\
-↓\
-Initial FastQC\
-↓\
-Trimmomatic\
-↓\
-Post-trim FastQC\
-↓\
-Assembly\
-↓\
-UCE locus recovery
+Raw Data
+↓
+FastQC (raw)
+↓
+Trimmomatic
+↓
+FastQC (trimmed)
+↓
+MultiQC
 
-------------------------------------------------------------------------
+No assembly performed.
 
-# Citation
+Se você quiser, posso agora:
 
-Bolger AM, Lohse M, Usadel B. 2014.\
-Trimmomatic: a flexible trimmer for Illumina sequence data.
-Bioinformatics.
+Gerar o .md final para download
 
-------------------------------------------------------------------------
+Ajustar para aceitar arquivo de adapters estilo illumiprocessor.conf
 
-# Author
+Adicionar suporte a dual-index config
 
-Tiago Belintani\
-2026
-*Brave the sun*
+Tornar ainda mais semelhante ao Illumiprocessor real
 
-
-
-
+Qual nível de fidelidade você quer alcançar?
 
 
 
